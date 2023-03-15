@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8" />
+  </head>
+  <body>
+    WebSocket test page<br/>
+    <input type="text" id="name" placeholder="Your name"/>
+    <button onclick="setName()">Set name!</button>
+    <div id="chat"></div>
+    <input type="text" id="message" placeholder="Message"/>
+    <button onclick="sendMessage()">Send!</button>
+    <button onclick="sendDisconnect()">Disconnect!</button>
+    <script>
+      let socket = new WebSocket('ws://localhost:3001');
+
+      names = {};
+
+      socket.onopen = () => {
+        console.log('Connected');
+        sendConnect();
+      }
+
+      socket.onclose = () => {
+        console.log('Disconnected');
+      };
+
+      socket.onmessage = (message) => {
+        console.log('Message received: ' + message.data);
+        handleMessage(message.data);
+      };
+
+      socket.onerror = (error) => {
+        console.log('Error: ' + error.message);
+      };
+
+      const messageElement = document.getElementById('message');
+      messageElement.addEventListener('keyup', (event) => {
+        if (event.keyCode === 13) {
+          event.preventDefault();
+          sendMessage();
+        }
+      });
+
+      function sendMessage() {
+        const message = document.getElementById('message').value;
+        const payload = `MSG\n${message}`;
+        document.getElementById('message').value = '';
+        socket.send(payload);
+      }
+
+      function sendConnect() {
+        const payload = 'CON\n';
+        socket.send(payload);
+      }
+
+      function sendDisconnect() {
+        const payload = 'DCN\n';
+        socket.send(payload);
+      }
+
+      document.getElementById('name').addEventListener('keyup', (event) => {
+        if (event.keyCode === 13) {
+          event.preventDefault();
+          setName();
+        }
+      });
+
+      function setName() {
+        const name = document.getElementById('name').value;
+        const payload = `NAM\n${name}`;
+        socket.send(payload);
+      }
+
+      function handleMessage(message) {
+        const firstNewLine = message.indexOf('\n');
+        const payloadType = message.substring(0, firstNewLine);
+        const payload = message.substring(firstNewLine + 1);
+
+        switch (payloadType) {
+          case 'MSG':
+            handleChatMessage(payload);
+            break;
+          case 'NAM':
+            handleNameChange(payload);
+            break;
+          case 'CON':
+            handleConnect(payload);
+            break;
+          case 'DCN':
+            handleDisconnect(payload);
+            break;
+          default:
+            console.log('Unknown payload type: ' + payloadType);
+        }
+      }
+
+      const chat = document.getElementById('chat');
+      function handleChatMessage(message) {
+        const firstEquals = message.indexOf('=');
+        const id = message.substring(0, firstEquals);
+        const name = names[id] || id;
+
+        const text = message.substring(firstEquals + 1);
+        const messageElement = document.createElement('p');
+        messageElement.innerHTML = `<b>${name}</b>: ${text}`;
+        chat.appendChild(messageElement);
+      }
+
+      function handleNameChange(payload) {
+        const firstEquals = payload.indexOf('=');
+        const id = payload.substring(0, firstEquals);
+        const name = payload.substring(firstEquals + 1);
+
+        prevName = names[id] || id;
+        names[id] = name;
+
+        const chatElement = document.createElement('p');
+        chatElement.innerHTML = `${prevName} is now known as <b>${name}</b>`;
+        chat.appendChild(chatElement);
+      }
+
+      function handleConnect(id) {
+        const chatElement = document.createElement('p');
+        chatElement.innerHTML = `<b>${id}</b> has connected`;
+        chat.appendChild(chatElement);
+      }
+
+      function handleDisconnect(id) {
+        const chatElement = document.createElement('p');
+
+        const name = names[id] || id;
+        chatElement.innerHTML = `<b>${name}</b> has disconnected`;
+        chat.appendChild(chatElement);
+      }
+    </script>
+  </body>
+</html>

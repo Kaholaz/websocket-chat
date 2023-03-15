@@ -1,0 +1,9 @@
+{
+  "dependencies": {
+    "crypto": "^1.0.1",
+    "net": "^1.0.2"
+  },
+  "devDependencies": {
+    "@types/node": "^18.15.3"
+  }
+}
